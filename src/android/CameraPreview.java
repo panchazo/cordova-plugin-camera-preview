@@ -611,7 +611,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      if (camera.getParameters().isAutoExposureLockSupported()) {
+      if (params.isAutoExposureLockSupported()) {
       JSONArray jsonExposureModes = new JSONArray();
       jsonExposureModes.put(new String("lock"));
       jsonExposureModes.put(new String("continuous"));
@@ -641,8 +641,8 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     String exposureMode;
 
     try {
-      if (camera.getParameters().isAutoExposureLockSupported()) {
-      if (camera.getParameters().getAutoExposureLock()) {
+      if (params.isAutoExposureLockSupported()) {
+      if (params.getAutoExposureLock()) {
         exposureMode = "lock";
       } else {
         exposureMode = "continuous";
@@ -671,7 +671,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      if (camera.getParameters().isAutoExposureLockSupported()) {
+      if (params.isAutoExposureLockSupported()) {
       params.setAutoExposureLock("lock".equals(exposureMode));
       fragment.setCameraParameters(params);
       callbackContext.success();
@@ -698,10 +698,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      if (camera.getParameters().getMinExposureCompensation() == 0 && camera.getParameters().getMaxExposureCompensation() == 0) {
+      if (params.getMinExposureCompensation() == 0 && params.getMaxExposureCompensation() == 0) {
       callbackContext.error("Exposure corection not supported");
     } else {
-      int exposureCompensation = camera.getParameters().getExposureCompensation();
+      int exposureCompensation = params.getExposureCompensation();
       callbackContext.success(exposureCompensation);
     }
     } catch (RuntimeException e) {
@@ -724,8 +724,8 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      int minExposureCompensation = camera.getParameters().getMinExposureCompensation();
-      int maxExposureCompensation = camera.getParameters().getMaxExposureCompensation();
+      int minExposureCompensation = params.getMinExposureCompensation();
+      int maxExposureCompensation = params.getMaxExposureCompensation();
 
     if ( minExposureCompensation == 0 && maxExposureCompensation == 0) {
       callbackContext.error("Exposure corection not supported");
@@ -760,8 +760,8 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      int minExposureCompensation = camera.getParameters().getMinExposureCompensation();
-      int maxExposureCompensation = camera.getParameters().getMaxExposureCompensation();
+      int minExposureCompensation = params.getMinExposureCompensation();
+      int maxExposureCompensation = params.getMaxExposureCompensation();
 
     if (minExposureCompensation == 0 && maxExposureCompensation == 0) {
       callbackContext.error("Exposure corection not supported");
@@ -800,7 +800,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 
     JSONArray jsonWhiteBalanceModes = new JSONArray();
     try {
-      if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
+      if (params.isAutoWhiteBalanceLockSupported()) {
         jsonWhiteBalanceModes.put(new String("lock"));
       }
     } catch (RuntimeException e) {
@@ -831,14 +831,14 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     String whiteBalanceMode;
 
     try {
-      if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
-      if (camera.getParameters().getAutoWhiteBalanceLock()) {
+      if (params.isAutoWhiteBalanceLockSupported()) {
+      if (params.getAutoWhiteBalanceLock()) {
         whiteBalanceMode = "lock";
       } else {
-        whiteBalanceMode = camera.getParameters().getWhiteBalance();
+        whiteBalanceMode = params.getWhiteBalance();
       };
     } else {
-      whiteBalanceMode = camera.getParameters().getWhiteBalance();
+      whiteBalanceMode = params.getWhiteBalance();
     }
     if (whiteBalanceMode != null) {
       callbackContext.success(whiteBalanceMode);
@@ -907,8 +907,8 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      if (camera.getParameters().isZoomSupported()) {
-      int maxZoom = camera.getParameters().getMaxZoom();
+      if (params.isZoomSupported()) {
+      int maxZoom = params.getMaxZoom();
       callbackContext.success(maxZoom);
     } else {
       callbackContext.error("Zoom not supported");
@@ -951,8 +951,8 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      if (camera.getParameters().isZoomSupported()) {
-      int getZoom = camera.getParameters().getZoom();
+      if (params.isZoomSupported()) {
+      int getZoom = params.getZoom();
       callbackContext.success(getZoom);
     } else {
       callbackContext.error("Zoom not supported");
@@ -977,7 +977,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     try {
-      if (camera.getParameters().isZoomSupported()) {
+      if (params.isZoomSupported()) {
       params.setZoom(zoom);
       fragment.setCameraParameters(params);
 
@@ -1149,7 +1149,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 
     List<String> supportedFlashModes;
     try {
-      supportedFlashModes = camera.getParameters().getSupportedFlashModes();
+      supportedFlashModes = params.getSupportedFlashModes();
     if (supportedFlashModes != null && supportedFlashModes.indexOf(flashMode) > -1) {
       params.setFlashMode(flashMode);
     } else {
