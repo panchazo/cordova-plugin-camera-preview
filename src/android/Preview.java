@@ -143,11 +143,22 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
 
       Log.d("CameraPreview", "before getParameters");
 
-      Camera.Parameters parameters = camera.getParameters();
+      Camera.Parameters parameters;
+      try {
+        parameters = camera.getParameters();
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getParameters failed in switchCamera (Android 15 compatibility issue): " + e.getMessage());
+        return;
+      }
 
       Log.d("CameraPreview", "before setPreviewSize");
 
-      mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
+      try {
+        mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getSupportedPreviewSizes failed in switchCamera (Android 15 compatibility issue): " + e.getMessage());
+        return;
+      }
       mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, mSurfaceView.getWidth(), mSurfaceView.getHeight());
       parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
       Log.d(TAG, mPreviewSize.width + " " + mPreviewSize.height);
@@ -297,11 +308,22 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
       try {
         // Now that the size is known, set up the camera parameters and begin
         // the preview.
-        mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+        try {
+          mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+        } catch (RuntimeException e) {
+          Log.e(TAG, "getParameters failed in surfaceChanged (Android 15 compatibility issue): " + e.getMessage());
+          return;
+        }
         if (mSupportedPreviewSizes != null) {
           mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, w, h);
         }
-        Camera.Parameters parameters = mCamera.getParameters();
+        Camera.Parameters parameters;
+        try {
+          parameters = mCamera.getParameters();
+        } catch (RuntimeException e) {
+          Log.e(TAG, "getParameters failed in surfaceChanged (Android 15 compatibility issue): " + e.getMessage());
+          return;
+        }
         parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
         requestLayout();
         //mCamera.setDisplayOrientation(90);

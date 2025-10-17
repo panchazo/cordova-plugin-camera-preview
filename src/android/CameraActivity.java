@@ -414,7 +414,13 @@ public class CameraActivity extends Fragment {
         Log.d(TAG, "camera parameter not null");
 
         // Check for flashMode as well to prevent error on frontward facing camera.
-        List<String> supportedFlashModesNewCamera = mCamera.getParameters().getSupportedFlashModes();
+        List<String> supportedFlashModesNewCamera;
+        try {
+          supportedFlashModesNewCamera = mCamera.getParameters().getSupportedFlashModes();
+        } catch (RuntimeException e) {
+          Log.e(TAG, "getParameters failed in switchCamera (Android 15 compatibility issue): " + e.getMessage());
+          supportedFlashModesNewCamera = null;
+        }
         String currentFlashModePreviousCamera = cameraParameters.getFlashMode();
         if (supportedFlashModesNewCamera != null && supportedFlashModesNewCamera.contains(currentFlashModePreviousCamera)) {
           Log.d(TAG, "current flash mode supported on new camera. setting params");
@@ -761,7 +767,14 @@ public class CameraActivity extends Fragment {
               return;
             }
             
-            Camera.Parameters params = mCamera.getParameters();
+            Camera.Parameters params;
+            try {
+              params = mCamera.getParameters();
+            } catch (RuntimeException e) {
+              Log.e(TAG, "getParameters failed in takePicture (Android 15 compatibility issue): " + e.getMessage());
+              canTakePicture = true;
+              return;
+            }
 
             Camera.Size size = getOptimalPictureSize(width, height, params.getPreviewSize(), params.getSupportedPictureSizes());
             params.setPictureSize(size.width, size.height);
@@ -805,9 +818,23 @@ public class CameraActivity extends Fragment {
       int videoWidth = 0;//set whatever
       int videoHeight = 0;//set whatever
 
-      Camera.Parameters cameraParams = mCamera.getParameters();
+      Camera.Parameters cameraParams;
+      try {
+        cameraParams = mCamera.getParameters();
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getParameters failed in startRecord (Android 15 compatibility issue): " + e.getMessage());
+        eventListener.onStartRecordVideoError("Camera parameters not available");
+        return;
+      }
+      
       if (withFlash) {
-        List<String> flashModes = cameraParams.getSupportedFlashModes();
+        List<String> flashModes;
+        try {
+          flashModes = cameraParams.getSupportedFlashModes();
+        } catch (RuntimeException e) {
+          Log.e(TAG, "getSupportedFlashModes failed in startRecord (Android 15 compatibility issue): " + e.getMessage());
+          flashModes = null;
+        }
 
         if (flashModes != null) {
           Log.d(TAG, "Enabling flash on device");
@@ -932,9 +959,15 @@ public class CameraActivity extends Fragment {
       mRecorder.release(); // release the recorder object
       mRecorder = null;
       mCamera.lock();
-      Camera.Parameters cameraParams = mCamera.getParameters();
-      cameraParams.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-      mCamera.setParameters(cameraParams);
+      Camera.Parameters cameraParams;
+      try {
+        cameraParams = mCamera.getParameters();
+        cameraParams.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+        mCamera.setParameters(cameraParams);
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getParameters failed in stopRecord (Android 15 compatibility issue): " + e.getMessage());
+        // Continue without setting flash mode
+      }
       mCamera.startPreview();
       eventListener.onStopRecordVideo(this.recordFilePath);
     } catch (Exception e) {
@@ -951,14 +984,26 @@ public class CameraActivity extends Fragment {
     if (mCamera != null) {
       mCamera.cancelAutoFocus();
 
-      Camera.Parameters parameters = mCamera.getParameters();
+      Camera.Parameters parameters;
+      try {
+        parameters = mCamera.getParameters();
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getParameters failed in setFocusArea (Android 15 compatibility issue): " + e.getMessage());
+        callback.onAutoFocus(false, this.mCamera);
+        return;
+      }
 
       Rect focusRect = calculateTapArea(pointX, pointY);
       parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
       parameters.setFocusAreas(Arrays.asList(new Camera.Area(focusRect, 1000)));
 
-      if (parameters.getMaxNumMeteringAreas() > 0) {
-        parameters.setMeteringAreas(Arrays.asList(new Camera.Area(focusRect, 1000)));
+      try {
+        if (parameters.getMaxNumMeteringAreas() > 0) {
+          parameters.setMeteringAreas(Arrays.asList(new Camera.Area(focusRect, 1000)));
+        }
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getMaxNumMeteringAreas failed in setFocusArea (Android 15 compatibility issue): " + e.getMessage());
+        // Continue without setting metering areas
       }
 
       try {
