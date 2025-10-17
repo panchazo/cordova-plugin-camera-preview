@@ -554,7 +554,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setColorEffect");
+    if (params == null) {
+      return true;
+    }
 
     List<String> supportedColors;
     supportedColors = params.getSupportedColorEffects();
@@ -576,7 +579,11 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getSupportedColorEffects");
+    if (params == null) {
+      return true;
+    }
+
     List<String> supportedColors;
     supportedColors = params.getSupportedColorEffects();
     JSONArray jsonColorEffects = new JSONArray();
@@ -598,15 +605,23 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getExposureModes");
+    if (params == null) {
+      return true;
+    }
 
-    if (camera.getParameters().isAutoExposureLockSupported()) {
+    try {
+      if (camera.getParameters().isAutoExposureLockSupported()) {
       JSONArray jsonExposureModes = new JSONArray();
       jsonExposureModes.put(new String("lock"));
       jsonExposureModes.put(new String("continuous"));
       callbackContext.success(jsonExposureModes);
     } else {
       callbackContext.error("Exposure modes not supported");
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getExposureModes check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -618,11 +633,15 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getExposureMode");
+    if (params == null) {
+      return true;
+    }
 
     String exposureMode;
 
-    if (camera.getParameters().isAutoExposureLockSupported()) {
+    try {
+      if (camera.getParameters().isAutoExposureLockSupported()) {
       if (camera.getParameters().getAutoExposureLock()) {
         exposureMode = "lock";
       } else {
@@ -631,6 +650,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
       callbackContext.success(exposureMode);
     } else {
       callbackContext.error("Exposure mode not supported");
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getExposureMode check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -642,14 +665,22 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setExposureMode");
+    if (params == null) {
+      return true;
+    }
 
-    if (camera.getParameters().isAutoExposureLockSupported()) {
+    try {
+      if (camera.getParameters().isAutoExposureLockSupported()) {
       params.setAutoExposureLock("lock".equals(exposureMode));
       fragment.setCameraParameters(params);
       callbackContext.success();
     } else {
       callbackContext.error("Exposure mode not supported");
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in setExposureMode check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -661,13 +692,21 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getExposureCompensation");
+    if (params == null) {
+      return true;
+    }
 
-    if (camera.getParameters().getMinExposureCompensation() == 0 && camera.getParameters().getMaxExposureCompensation() == 0) {
+    try {
+      if (camera.getParameters().getMinExposureCompensation() == 0 && camera.getParameters().getMaxExposureCompensation() == 0) {
       callbackContext.error("Exposure corection not supported");
     } else {
       int exposureCompensation = camera.getParameters().getExposureCompensation();
       callbackContext.success(exposureCompensation);
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getExposureCompensation check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -679,10 +718,14 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setExposureCompensation");
+    if (params == null) {
+      return true;
+    }
 
-    int minExposureCompensation = camera.getParameters().getMinExposureCompensation();
-    int maxExposureCompensation = camera.getParameters().getMaxExposureCompensation();
+    try {
+      int minExposureCompensation = camera.getParameters().getMinExposureCompensation();
+      int maxExposureCompensation = camera.getParameters().getMaxExposureCompensation();
 
     if ( minExposureCompensation == 0 && maxExposureCompensation == 0) {
       callbackContext.error("Exposure corection not supported");
@@ -697,6 +740,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 
       callbackContext.success(exposureCompensation);
     }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in setExposureCompensation check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+    }
 
     return true;
   }
@@ -707,10 +754,14 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getExposureCompensationRange");
+    if (params == null) {
+      return true;
+    }
 
-    int minExposureCompensation = camera.getParameters().getMinExposureCompensation();
-    int maxExposureCompensation = camera.getParameters().getMaxExposureCompensation();
+    try {
+      int minExposureCompensation = camera.getParameters().getMinExposureCompensation();
+      int maxExposureCompensation = camera.getParameters().getMaxExposureCompensation();
 
     if (minExposureCompensation == 0 && maxExposureCompensation == 0) {
       callbackContext.error("Exposure corection not supported");
@@ -725,6 +776,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
       }
       callbackContext.success(jsonExposureRange);
     }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getExposureCompensationRange check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+    }
 
     return true;
   }
@@ -735,15 +790,23 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getSupportedWhiteBalanceModes");
+    if (params == null) {
+      return true;
+    }
 
     List<String> supportedWhiteBalanceModes;
     supportedWhiteBalanceModes = params.getSupportedWhiteBalance();
 
     JSONArray jsonWhiteBalanceModes = new JSONArray();
-    if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
-      jsonWhiteBalanceModes.put(new String("lock"));
+    try {
+      if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
+        jsonWhiteBalanceModes.put(new String("lock"));
+      }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getSupportedWhiteBalanceModes check (Android 15 compatibility issue): " + e.getMessage());
     }
+    
     if (supportedWhiteBalanceModes != null) {
       for (int i=0; i<supportedWhiteBalanceModes.size(); i++) {
         jsonWhiteBalanceModes.put(new String(supportedWhiteBalanceModes.get(i)));
@@ -760,11 +823,15 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getWhiteBalanceMode");
+    if (params == null) {
+      return true;
+    }
 
     String whiteBalanceMode;
 
-    if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
+    try {
+      if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
       if (camera.getParameters().getAutoWhiteBalanceLock()) {
         whiteBalanceMode = "lock";
       } else {
@@ -778,6 +845,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     } else {
       callbackContext.error("White balance mode not supported");
     }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getWhiteBalanceMode check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+    }
 
     return true;
   }
@@ -788,10 +859,14 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setWhiteBalanceMode");
+    if (params == null) {
+      return true;
+    }
 
-    if (whiteBalanceMode.equals("lock")) {
-      if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
+    try {
+      if (whiteBalanceMode.equals("lock")) {
+        if (camera.getParameters().isAutoWhiteBalanceLockSupported()) {
         params.setAutoWhiteBalanceLock(true);
         fragment.setCameraParameters(params);
         callbackContext.success();
@@ -812,6 +887,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     } else {
       callbackContext.error("White balance parameter not supported");
     }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in setWhiteBalanceMode check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+    }
 
     return true;
   }
@@ -822,13 +901,21 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getMaxZoom");
+    if (params == null) {
+      return true;
+    }
 
-    if (camera.getParameters().isZoomSupported()) {
+    try {
+      if (camera.getParameters().isZoomSupported()) {
       int maxZoom = camera.getParameters().getMaxZoom();
       callbackContext.success(maxZoom);
     } else {
       callbackContext.error("Zoom not supported");
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getMaxZoom check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -840,7 +927,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getHorizontalFOV");
+    if (params == null) {
+      return true;
+    }
 
     float horizontalViewAngle = params.getHorizontalViewAngle();
 
@@ -855,13 +945,21 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getZoom");
+    if (params == null) {
+      return true;
+    }
 
-    if (camera.getParameters().isZoomSupported()) {
+    try {
+      if (camera.getParameters().isZoomSupported()) {
       int getZoom = camera.getParameters().getZoom();
       callbackContext.success(getZoom);
     } else {
       callbackContext.error("Zoom not supported");
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getZoom check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -873,15 +971,23 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setZoom");
+    if (params == null) {
+      return true;
+    }
 
-    if (camera.getParameters().isZoomSupported()) {
+    try {
+      if (camera.getParameters().isZoomSupported()) {
       params.setZoom(zoom);
       fragment.setCameraParameters(params);
 
       callbackContext.success(zoom);
     } else {
       callbackContext.error("Zoom not supported");
+    }
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in setZoom check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
     }
 
     return true;
@@ -893,7 +999,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setPreviewSize");
+    if (params == null) {
+      return true;
+    }
 
     params.setPreviewSize(width, height);
     fragment.setCameraParameters(params);
@@ -909,7 +1018,11 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getSupportedFlashModes");
+    if (params == null) {
+      return true;
+    }
+
     List<String> supportedFlashModes;
     supportedFlashModes = params.getSupportedFlashModes();
     JSONArray jsonFlashModes = new JSONArray();
@@ -930,7 +1043,11 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getSupportedFocusModes");
+    if (params == null) {
+      return true;
+    }
+
     List<String> supportedFocusModes;
     supportedFocusModes = params.getSupportedFocusModes();
 
@@ -954,7 +1071,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getFocusMode");
+    if (params == null) {
+      return true;
+    }
 
     List<String> supportedFocusModes;
     supportedFocusModes = params.getSupportedFocusModes();
@@ -975,7 +1095,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setFocusMode");
+    if (params == null) {
+      return true;
+    }
 
     List<String> supportedFocusModes;
     List<String> supportedAutoFocusModes = Arrays.asList("auto", "continuous-picture", "continuous-video","macro");
@@ -997,7 +1120,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "getFlashMode");
+    if (params == null) {
+      return true;
+    }
 
     String flashMode = params.getFlashMode();
 
@@ -1016,10 +1142,14 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     }
 
     Camera camera = fragment.getCamera();
-    Camera.Parameters params = camera.getParameters();
+    Camera.Parameters params = getCameraParametersSafely(camera, callbackContext, "setFlashMode");
+    if (params == null) {
+      return true;
+    }
 
     List<String> supportedFlashModes;
-    supportedFlashModes = camera.getParameters().getSupportedFlashModes();
+    try {
+      supportedFlashModes = camera.getParameters().getSupportedFlashModes();
     if (supportedFlashModes != null && supportedFlashModes.indexOf(flashMode) > -1) {
       params.setFlashMode(flashMode);
     } else {
@@ -1030,6 +1160,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     fragment.setCameraParameters(params);
 
     callbackContext.success(flashMode);
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in setFlashMode check (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+    }
     return true;
   }
 
