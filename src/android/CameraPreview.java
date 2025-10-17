@@ -97,6 +97,27 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
   private JSONArray execArgs;
 
   private ViewParent webViewParent;
+  
+  // Helper method to safely get camera parameters
+  private Camera.Parameters getCameraParametersSafely(Camera camera, CallbackContext callbackContext, String methodName) {
+    if (camera == null) {
+      callbackContext.error("Camera is null");
+      return null;
+    }
+    
+    try {
+      Camera.Parameters params = camera.getParameters();
+      if (params == null) {
+        callbackContext.error("Camera parameters are null");
+        return null;
+      }
+      return params;
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in " + methodName + " (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+      return null;
+    }
+  }
 
   private int containerViewId = 20; //<- set to random number to prevent conflict with other plugins
   public CameraPreview(){
@@ -243,7 +264,13 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 
     List<Camera.Size> supportedSizes;
     Camera camera = fragment.getCamera();
-    supportedSizes = camera.getParameters().getSupportedPictureSizes();
+    try {
+      supportedSizes = camera.getParameters().getSupportedPictureSizes();
+    } catch (RuntimeException e) {
+      Log.e(TAG, "getParameters failed in getSupportedPictureSizes (Android 15 compatibility issue): " + e.getMessage());
+      callbackContext.error("Camera parameters not available");
+      return true;
+    }
     if (supportedSizes != null) {
       JSONArray sizes = new JSONArray();
       for (int i=0; i<supportedSizes.size(); i++) {

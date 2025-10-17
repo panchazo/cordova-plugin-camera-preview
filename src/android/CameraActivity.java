@@ -108,6 +108,15 @@ public class CameraActivity extends Fragment {
   private RecordingState mRecordingState = RecordingState.INITIALIZING;
   private MediaRecorder mRecorder = null;
   private String recordFilePath;
+  
+  // Camera lifecycle synchronization
+  private final Object cameraLock = new Object();
+  private boolean cameraReleasing = false;
+  
+  // Check if camera is recording or unlocked
+  private boolean isRecording() {
+    return mRecorder != null && mRecordingState == RecordingState.STARTED;
+  }
 
   public void setEventListener(CameraPreviewListener listener){
     eventListener = listener;
@@ -285,8 +294,14 @@ public class CameraActivity extends Fragment {
   public void onResume() {
     super.onResume();
 
-    try {
-      mCamera = Camera.open(defaultCameraId);
+    synchronized (cameraLock) {
+      if (cameraReleasing) {
+        Log.d(TAG, "Camera is being released, skipping onResume");
+        return;
+      }
+      
+      try {
+        mCamera = Camera.open(defaultCameraId);
 
       if (cameraParameters != null) {
         mCamera.setParameters(cameraParameters);
@@ -340,19 +355,22 @@ public class CameraActivity extends Fragment {
     } catch (Exception e) {
       Log.e(TAG, "Error in onResume", e);
     }
+    } // End synchronized block
   }
 
   @Override
   public void onPause() {
     super.onPause();
-
-    // Because the Camera object is a shared resource, it's very important to release it when the activity is paused.
-    if (mCamera != null) {
-      setDefaultCameraId();
-      mPreview.setCamera(null, -1);
-      mCamera.setPreviewCallback(null);
-      mCamera.release();
-      mCamera = null;
+    
+    synchronized (cameraLock) {
+      cameraReleasing = true;
+      if (mCamera != null) {
+        try { mCamera.setPreviewCallback(null); } catch (Exception ignore) {}
+        try { mCamera.stopPreview(); } catch (Exception ignore) {}
+        try { mCamera.release(); } catch (Exception ignore) {}
+        mCamera = null;
+      }
+      cameraReleasing = false;
     }
 
     Activity activity = getActivity();
@@ -644,15 +662,55 @@ public class CameraActivity extends Fragment {
   }
 
   public void takeSnapshot(final int quality) {
-    if (mCamera == null) {
-      return;
-    }
+    synchronized (cameraLock) {
+      if (cameraReleasing) {
+        if (eventListener != null) {
+          eventListener.onSnapshotTakenError("Camera is being released");
+        }
+        return;
+      }
+      
+      if (mCamera == null) {
+        return;
+      }
+      
+      // Block snapshot if recording or camera is unlocked
+      if (isRecording()) {
+        if (eventListener != null) {
+          eventListener.onSnapshotTakenError("Camera is busy recording");
+        }
+        return;
+      }
     mCamera.setPreviewCallback(new Camera.PreviewCallback() {
       @Override
       public void onPreviewFrame(byte[] bytes, Camera camera) {
         try {
-          Camera.Parameters parameters = camera.getParameters();
-          Camera.Size size = parameters.getPreviewSize();
+          Camera.Parameters parameters = null;
+          Camera.Size size = null;
+          int previewFormat = ImageFormat.NV21; // Default format
+          
+          try {
+            parameters = camera.getParameters();
+            if (parameters != null) {
+              size = parameters.getPreviewSize();
+              previewFormat = parameters.getPreviewFormat();
+            }
+          } catch (RuntimeException e) {
+            Log.e(TAG, "getParameters failed (Android 15 compatibility issue): " + e.getMessage());
+            // Fallback: try to get size from mPreview if available
+            if (mPreview != null && mPreview.mPreviewSize != null) {
+              size = mPreview.mPreviewSize;
+            } else {
+              // Last resort: use default size
+              size = camera.new Size(640, 480);
+            }
+          }
+          
+          if (size == null) {
+            Log.e(TAG, "Could not determine preview size, using default");
+            size = camera.new Size(640, 480);
+          }
+          
           int orientation = mPreview.getDisplayOrientation();
           if (mPreview.getCameraFacing() == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             bytes = rotateNV21(bytes, size.width, size.height, (360 - orientation) % 360);
@@ -663,7 +721,7 @@ public class CameraActivity extends Fragment {
           Rect rect = orientation == 90 || orientation == 270 ?
             new Rect(0, 0, size.height, size.width) :
             new Rect(0, 0, size.width, size.height);
-          YuvImage yuvImage = new YuvImage(bytes, parameters.getPreviewFormat(), rect.width(), rect.height(), null);
+          YuvImage yuvImage = new YuvImage(bytes, previewFormat, rect.width(), rect.height(), null);
           ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
           yuvImage.compressToJpeg(rect, quality, byteArrayOutputStream);
           byte[] data = byteArrayOutputStream.toByteArray();
@@ -672,12 +730,16 @@ public class CameraActivity extends Fragment {
         } catch (IOException e) {
           Log.d(TAG, "CameraPreview IOException");
           eventListener.onSnapshotTakenError("IO Error");
+        } catch (Exception e) {
+          Log.e(TAG, "CameraPreview general exception in takeSnapshot", e);
+          eventListener.onSnapshotTakenError("Error taking snapshot: " + e.getMessage());
         } finally {
 
           mCamera.setPreviewCallback(null);
         }
       }
     });
+    } // End synchronized block
   }
 
   public void takePicture(final int width, final int height, final int quality){

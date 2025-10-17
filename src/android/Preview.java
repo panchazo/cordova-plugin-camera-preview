@@ -52,20 +52,27 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
     this.cameraId = cameraId;
 
     if (camera != null) {
-      mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
-      setCameraDisplayOrientation();
+      try {
+        mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+        setCameraDisplayOrientation();
 
-      List<String> mFocusModes = mCamera.getParameters().getSupportedFocusModes();
+        List<String> mFocusModes = mCamera.getParameters().getSupportedFocusModes();
 
-      Camera.Parameters params = mCamera.getParameters();
-      if (mFocusModes.contains("continuous-picture")) {
-        params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-      } else if (mFocusModes.contains("continuous-video")){
-        params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-      } else if (mFocusModes.contains("auto")){
-        params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+        Camera.Parameters params = mCamera.getParameters();
+        if (params != null && mFocusModes != null) {
+          if (mFocusModes.contains("continuous-picture")) {
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+          } else if (mFocusModes.contains("continuous-video")){
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+          } else if (mFocusModes.contains("auto")){
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+          }
+          mCamera.setParameters(params);
+        }
+      } catch (RuntimeException e) {
+        Log.e(TAG, "getParameters failed in setCamera (Android 15 compatibility issue): " + e.getMessage());
+        // Continue with camera setup even if parameters can't be accessed
       }
-      mCamera.setParameters(params);
     }
   }
 
